@@ -1,0 +1,46 @@
+services:
+  auth-service:
+    build: .
+    container_name: auth-service-app
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY}
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY}
+      JWT_KEY_ID: ${JWT_KEY_ID:-auth-service-key}
+      USER_SERVICE_URL: ${USER_SERVICE_URL}
+    depends_on:
+      auth-postgres:
+        condition: service_healthy
+    networks:
+      - inno-net
+
+  auth-postgres:
+    image: postgres:16
+    container_name: auth-service-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - inno-net
+
+volumes:
+  postgres_data:
+
+networks:
+  inno-net:
+    external: true

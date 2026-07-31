@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://auth-postgres:5432/${POSTGRES_DB}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+
+  docker:
+    compose:
+      enabled: false

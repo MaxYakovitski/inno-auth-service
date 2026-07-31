@@ -1,0 +1,10 @@
+jwt:
+  private-key: ""
+  public-key: ""
+  key-id: test-key
+  access-token-expiration: 15m
+  refresh-token-expiration: 7d
+
+user-service:
+  base-url: http://localhost:8080
+  timeout-ms: 5000
