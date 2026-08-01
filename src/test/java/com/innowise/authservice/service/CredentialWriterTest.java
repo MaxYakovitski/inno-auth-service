@@ -5,9 +5,9 @@ import com.innowise.authservice.entity.Credential;
 import com.innowise.authservice.entity.Role;
 import com.innowise.authservice.mapper.CredentialMapper;
 import com.innowise.authservice.repository.CredentialRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,12 +29,8 @@ class CredentialWriterTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @InjectMocks
     private CredentialWriter credentialWriter;
-
-    @BeforeEach
-    void setUp() {
-        credentialWriter = new CredentialWriter(credentialRepository, credentialMapper, passwordEncoder);
-    }
 
     @Test
     void save_hashesPasswordAndPersistsMappedEntity() {
