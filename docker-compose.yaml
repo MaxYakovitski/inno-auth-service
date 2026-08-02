@@ -9,8 +9,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY}
-      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY}
+      JWT_PRIVATE_KEY_LOCATION: file:/run/keys/private.pem
+      JWT_PUBLIC_KEY_LOCATION: file:/run/keys/public.pem
       JWT_KEY_ID: ${JWT_KEY_ID:-auth-service-key}
       USER_SERVICE_URL: ${USER_SERVICE_URL}
     depends_on:

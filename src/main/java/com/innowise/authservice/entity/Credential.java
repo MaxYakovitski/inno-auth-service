@@ -34,7 +34,7 @@ public class Credential {
     private String passwordHash;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 50)
+    @Column(nullable = false, length = 25)
     private Role role;
 
     @Column(nullable = false)

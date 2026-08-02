@@ -11,7 +11,7 @@ import com.innowise.authservice.service.AuthService;
 import com.innowise.authservice.service.CredentialWriter;
 import com.innowise.authservice.service.JwtService;
 import com.innowise.authservice.service.UserServiceClient;
-import io.jsonwebtoken.Claims;
+import com.nimbusds.jwt.JWTClaimsSet;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -93,7 +93,7 @@ public class AuthServiceImpl implements AuthService {
         return TokenDto.of(newAccessToken, dto.refreshToken());
     }
 
-    private UUID parseSubject(Claims claims) {
+    private UUID parseSubject(JWTClaimsSet claims) {
         try {
             return UUID.fromString(claims.getSubject());
         } catch (IllegalArgumentException | NullPointerException _) {

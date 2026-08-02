@@ -2,17 +2,20 @@ package com.innowise.authservice.service.impl;
 
 import com.innowise.authservice.config.JwtKeyProvider;
 import com.innowise.authservice.config.JwtProperties;
+import com.innowise.authservice.controller.TestKeys;
 import com.innowise.authservice.entity.Credential;
 import com.innowise.authservice.entity.Role;
 import com.innowise.authservice.exception.InvalidRefreshTokenException;
 import com.innowise.authservice.service.JwtService;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.SignatureException;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.crypto.RSASSAVerifier;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.authentication.BadCredentialsException;
 
+import java.text.ParseException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
@@ -30,11 +33,19 @@ class JwtServiceImplTest {
     private JwtServiceImpl jwtService;
     private Credential credential;
 
+    private static JwtProperties properties(Duration accessTtl) {
+        return new JwtProperties(null, null, KEY_ID, accessTtl, REFRESH_TTL);
+    }
+
+    private JWTClaimsSet accessTokenClaims() {
+        return jwtService.parseAndValidate(jwtService.generateAccessToken(credential));
+    }
+
     @BeforeEach
     void setUp() {
 
         JwtProperties properties = properties(ACCESS_TTL);
-        keyProvider = new JwtKeyProvider(properties);
+        keyProvider = new JwtKeyProvider(TestKeys.rsaJwk(KEY_ID));
         jwtService = new JwtServiceImpl(keyProvider, properties);
 
         credential = Credential.builder()
@@ -47,104 +58,86 @@ class JwtServiceImplTest {
                 .build();
     }
 
-    private static JwtProperties properties(Duration accessTtl) {
-        return new JwtProperties(null, null, KEY_ID, accessTtl, REFRESH_TTL);
-    }
-
     @Test
-    void generateAccessToken_contains_correctClaims() {
-        String token = jwtService.generateAccessToken(credential);
-        Claims claims = jwtService.parseAndValidate(token);
+    void generate_access_token_contains_correct_claims() {
+        JWTClaimsSet claims = accessTokenClaims();
 
         assertThat(claims.getSubject()).isEqualTo(credential.getUserId().toString());
-        assertThat(claims.get(JwtService.USER_ID_CLAIM, String.class))
+        assertThat(claims.getClaim(JwtService.USER_ID_CLAIM))
                 .isEqualTo(credential.getUserId().toString());
-        assertThat(claims.get(JwtService.ROLE_CLAIM, String.class))
+        assertThat(claims.getClaim(JwtService.ROLE_CLAIM))
                 .isEqualTo(Role.USER.name());
-        assertThat(claims.get(JwtService.TOKEN_TYPE_CLAIM, String.class))
+        assertThat(claims.getClaim(JwtService.TOKEN_TYPE_CLAIM))
                 .isEqualTo(JwtService.ACCESS_TOKEN_TYPE);
     }
 
     @Test
-    void generateAccessToken_is_signed_with_rs256_and_has_keyId() {
-        String token = jwtService.generateAccessToken(credential);
+    void generate_access_token_is_signed_with_rs256_and_has_key_id() throws ParseException {
+        SignedJWT jwt = SignedJWT.parse(jwtService.generateAccessToken(credential));
 
-        var header = Jwts.parser()
-                .verifyWith(keyProvider.publicKey())
-                .build()
-                .parseSignedClaims(token)
-                .getHeader();
-
-        assertThat(header.getAlgorithm()).isEqualTo("RS256");
-        assertThat(header.getKeyId()).isEqualTo(KEY_ID);
+        assertThat(jwt.getHeader().getAlgorithm()).isEqualTo(JWSAlgorithm.RS256);
+        assertThat(jwt.getHeader().getKeyID()).isEqualTo(KEY_ID);
     }
 
     @Test
-    void token_is_verifiable_with_publicKey() {
-        String token = jwtService.generateAccessToken(credential);
-
-        assertThatCode(() -> Jwts.parser()
-                .verifyWith(keyProvider.publicKey())
-                .build()
-                .parseSignedClaims(token))
-                .doesNotThrowAnyException();
+    void token_is_verifiable_with_public_key() throws Exception {
+        SignedJWT jwt = SignedJWT.parse(jwtService.generateAccessToken(credential));
+        assertThat(jwt.verify(new RSASSAVerifier(keyProvider.verificationKey()))).isTrue();
     }
 
     @Test
-    void token_signed_with_anotherKey_is_rejected() {
-        String foreignToken = new JwtServiceImpl(new JwtKeyProvider(properties(ACCESS_TTL)), properties(ACCESS_TTL))
-                .generateAccessToken(credential);
+    void token_signed_with_another_key_is_rejected() {
+        String foreignToken = new JwtServiceImpl(
+                new JwtKeyProvider(TestKeys.rsaJwk(KEY_ID)),
+                properties(ACCESS_TTL)
+        ).generateAccessToken(credential);
 
         assertThatThrownBy(() -> jwtService.parseAndValidate(foreignToken))
-                .isInstanceOf(SignatureException.class);
+                .isInstanceOf(BadCredentialsException.class);
     }
 
     @Test
-    void expiredToken_throws_expiredJwtException() {
+    void expired_token_throws_expired_jwt_exception() {
         JwtProperties expired = properties(Duration.ofSeconds(-1));
-        JwtServiceImpl service = new JwtServiceImpl(new JwtKeyProvider(expired), expired);
+        JwtServiceImpl service = new JwtServiceImpl(new JwtKeyProvider(TestKeys.rsaJwk(KEY_ID)), expired);
         String token = service.generateAccessToken(credential);
 
         assertThatThrownBy(() -> service.parseAndValidate(token))
-                .isInstanceOf(ExpiredJwtException.class);
+                .isInstanceOf(BadCredentialsException.class);
     }
 
     @Test
-    void generate_refreshToken_with_refreshType() {
-        String token = jwtService.generateRefreshToken(credential);
-        Claims claims = jwtService.parseAndValidate(token);
+    void generate_refresh_token_with_refresh_type() {
+        JWTClaimsSet claims = jwtService.parseAndValidate(jwtService.generateRefreshToken(credential));
 
-        assertThat(claims.get(JwtService.TOKEN_TYPE_CLAIM, String.class))
+        assertThat(claims.getClaim(JwtService.TOKEN_TYPE_CLAIM))
                 .isEqualTo(JwtService.REFRESH_TOKEN_TYPE);
     }
 
     @Test
-    void requireTokenType_passes_when_type_matches() {
-        Claims claims = jwtService.parseAndValidate(jwtService.generateAccessToken(credential));
-
+    void require_token_type_passes_when_type_matches() {
+        JWTClaimsSet claims = accessTokenClaims();
         assertThatCode(() -> jwtService.requireTokenType(claims, JwtService.ACCESS_TOKEN_TYPE))
                 .doesNotThrowAnyException();
     }
 
     @Test
-    void requireTokenType_throws_when_type_not_match() {
-        Claims claims = jwtService.parseAndValidate(jwtService.generateAccessToken(credential));
-
+    void require_token_type_throws_when_type_not_match() {
+        JWTClaimsSet claims = accessTokenClaims();
         assertThatThrownBy(() -> jwtService.requireTokenType(claims, JwtService.REFRESH_TOKEN_TYPE))
                 .isInstanceOf(InvalidRefreshTokenException.class);
     }
 
     @Test
-    void generateServiceToken_carriesAdminRoleAndExpiresQuickly() {
-        Claims claims = jwtService.parseAndValidate(jwtService.generateServiceToken());
+    void generate_service_token_carries_admin_role_and_expires_quickly() {
+        JWTClaimsSet claims = jwtService.parseAndValidate(jwtService.generateServiceToken());
 
         assertThat(claims.getSubject()).isEqualTo(JwtService.SERVICE_SUBJECT);
-        assertThat(claims.get(JwtService.ROLE_CLAIM, String.class)).isEqualTo(Role.ADMIN.name());
-        assertThat(claims.get(JwtService.TOKEN_TYPE_CLAIM, String.class))
+        assertThat(claims.getClaim(JwtService.ROLE_CLAIM)).isEqualTo(Role.ADMIN.name());
+        assertThat(claims.getClaim(JwtService.TOKEN_TYPE_CLAIM))
                 .isEqualTo(JwtService.ACCESS_TOKEN_TYPE);
-        assertThat(claims.get(JwtService.USER_ID_CLAIM)).isNull();
-
-        assertThat(claims.getExpiration().toInstant())
+        assertThat(claims.getClaim(JwtService.USER_ID_CLAIM)).isNull();
+        assertThat(claims.getExpirationTime().toInstant())
                 .isBefore(Instant.now().plusSeconds(61));
     }
 

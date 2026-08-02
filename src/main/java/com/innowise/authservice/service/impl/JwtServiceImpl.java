@@ -7,10 +7,17 @@ import com.innowise.authservice.entity.Credential;
 import com.innowise.authservice.entity.Role;
 import com.innowise.authservice.exception.InvalidRefreshTokenException;
 import com.innowise.authservice.service.JwtService;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.crypto.RSASSASigner;
+import com.nimbusds.jose.crypto.RSASSAVerifier;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
 
+import java.text.ParseException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
@@ -31,40 +38,38 @@ public class JwtServiceImpl implements JwtService {
 
     @Override
     public String generateAccessToken(Credential credential) {
-        return buildToken(credential, ACCESS_TOKEN_TYPE, accessTokenExpiration);
+        return sign(userClaims(credential, ACCESS_TOKEN_TYPE, accessTokenExpiration));
     }
 
     @Override
     public String generateRefreshToken(Credential credential) {
-        return buildToken(credential, REFRESH_TOKEN_TYPE, refreshTokenExpiration);
-    }
-
-    private String buildToken(Credential credential, String tokenType, Duration expiration) {
-        Instant now = Instant.now();
-        return Jwts.builder()
-                .header().keyId(keyProvider.keyId()).and()
-                .subject(credential.getUserId().toString())
-                .claim(USER_ID_CLAIM, credential.getUserId().toString())
-                .claim(ROLE_CLAIM, credential.getRole().name())
-                .claim(TOKEN_TYPE_CLAIM, tokenType)
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plus(expiration)))
-                .signWith(keyProvider.privateKey(), Jwts.SIG.RS256)
-                .compact();
+        return sign(userClaims(credential, REFRESH_TOKEN_TYPE, refreshTokenExpiration));
     }
 
     @Override
-    public Claims parseAndValidate(String token) {
-        return Jwts.parser()
-                .verifyWith(keyProvider.publicKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+    public JWTClaimsSet parseAndValidate(String token) {
+        try {
+            SignedJWT jwt = SignedJWT.parse(token);
+
+            if (!jwt.verify(new RSASSAVerifier(keyProvider.verificationKey()))) {
+                throw new BadCredentialsException("Token signature does not match");
+            }
+
+            JWTClaimsSet claims = jwt.getJWTClaimsSet();
+            Date expiration = claims.getExpirationTime();
+
+            if (expiration == null || expiration.before(new Date())) {
+                throw new BadCredentialsException("Token is expired");
+            }
+            return claims;
+        } catch (ParseException | JOSEException e) {
+            throw new BadCredentialsException("Token is malformed", e);
+        }
     }
 
     @Override
-    public void requireTokenType(Claims claims, String expectedType) {
-        var actualTokenType = claims.get(TOKEN_TYPE_CLAIM, String.class);
+    public void requireTokenType(JWTClaimsSet claims, String expectedType) {
+        var actualTokenType = claims.getClaim(TOKEN_TYPE_CLAIM);
         if (!expectedType.equals(actualTokenType)) {
             throw new InvalidRefreshTokenException(
                     "Expected: " + expectedType + " token but got: " + actualTokenType
@@ -75,14 +80,39 @@ public class JwtServiceImpl implements JwtService {
     @Override
     public String generateServiceToken() {
         Instant now = Instant.now();
-        return Jwts.builder()
-                .header().keyId(keyProvider.keyId()).and()
+        return sign(new JWTClaimsSet.Builder()
                 .subject(SERVICE_SUBJECT)
                 .claim(ROLE_CLAIM, Role.ADMIN.name())
                 .claim(TOKEN_TYPE_CLAIM, ACCESS_TOKEN_TYPE)
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plus(SERVICE_TOKEN_TTL)))
-                .signWith(keyProvider.privateKey(), Jwts.SIG.RS256)
-                .compact();
+                .issueTime(Date.from(now))
+                .expirationTime(Date.from(now.plus(SERVICE_TOKEN_TTL)))
+                .build());
+    }
+
+    private JWTClaimsSet userClaims(Credential credential, String tokenType, Duration expiration) {
+        Instant now = Instant.now();
+        String userId = credential.getUserId().toString();
+        return new JWTClaimsSet.Builder()
+                .subject(userId)
+                .claim(USER_ID_CLAIM, userId)
+                .claim(ROLE_CLAIM, credential.getRole().name())
+                .claim(TOKEN_TYPE_CLAIM, tokenType)
+                .issueTime(Date.from(now))
+                .expirationTime(Date.from(now.plus(expiration)))
+                .build();
+    }
+
+    private String sign(JWTClaimsSet claims) {
+        try {
+            SignedJWT jwt = new SignedJWT(
+                    new JWSHeader.Builder(JWSAlgorithm.RS256)
+                            .keyID(keyProvider.keyId())
+                            .build(),
+                    claims);
+            jwt.sign(new RSASSASigner(keyProvider.signingKey()));
+            return jwt.serialize();
+        } catch (JOSEException e) {
+            throw new IllegalStateException("Cannot sign JWT", e);
+        }
     }
 }

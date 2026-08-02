@@ -1,6 +1,5 @@
 package com.innowise.authservice.exception;
 
-import io.jsonwebtoken.ExpiredJwtException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -47,14 +46,6 @@ public class AuthExceptionHandler {
         log.warn("Invalid refresh token: {}", e.getMessage());
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, e.getMessage());
         problem.setProperty("code", "invalid_refresh_token");
-        return problem;
-    }
-
-    @ExceptionHandler(ExpiredJwtException.class)
-    public ProblemDetail handleExpiredJwt(ExpiredJwtException e) {
-        log.warn("Expired jwt token: {}", e.getMessage());
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, e.getMessage());
-        problem.setProperty("code", "expired_jwt");
         return problem;
     }
 

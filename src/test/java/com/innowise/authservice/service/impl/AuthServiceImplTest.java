@@ -12,7 +12,7 @@ import com.innowise.authservice.repository.CredentialRepository;
 import com.innowise.authservice.service.CredentialWriter;
 import com.innowise.authservice.service.JwtService;
 import com.innowise.authservice.service.UserServiceClient;
-import io.jsonwebtoken.Claims;
+import com.nimbusds.jwt.JWTClaimsSet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -186,11 +186,12 @@ class AuthServiceImplTest {
 
     @Test
     void refresh_inactiveAccount_throws_BadCredentials() {
-        var claims = mock(Claims.class);
+        var claims = new JWTClaimsSet.Builder()
+                .subject(userId.toString())
+                .build();
         var credential = Credential.builder().userId(userId).active(false).build();
 
         when(jwtService.parseAndValidate("refresh-token")).thenReturn(claims);
-        when(claims.getSubject()).thenReturn(userId.toString());
         when(credentialRepository.findByUserId(userId)).thenReturn(Optional.of(credential));
 
         var credentialRefreshDto = new CredentialRefreshDto("refresh-token");

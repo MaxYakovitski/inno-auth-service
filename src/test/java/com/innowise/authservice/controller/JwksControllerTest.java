@@ -1,20 +1,16 @@
 package com.innowise.authservice.controller;
 
 import com.innowise.authservice.config.JwtKeyProvider;
-import com.innowise.authservice.config.JwtProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 
-import java.time.Duration;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.*;
 
 
 class JwksControllerTest {
 
-    private final JwtKeyProvider keyProvider = new JwtKeyProvider(
-            new JwtProperties(null, null, "test-key", Duration.ofMinutes(15), Duration.ofDays(7)));
-
+    private final JwtKeyProvider keyProvider = new JwtKeyProvider(TestKeys.rsaJwk("test-key"));
     private final JwksController controller = new JwksController(keyProvider);
 
     @Test

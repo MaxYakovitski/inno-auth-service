@@ -2,7 +2,7 @@ package com.innowise.authservice.service;
 
 
 import com.innowise.authservice.entity.Credential;
-import io.jsonwebtoken.Claims;
+import com.nimbusds.jwt.JWTClaimsSet;
 
 public interface JwtService {
 
@@ -17,10 +17,9 @@ public interface JwtService {
 
     String generateAccessToken(Credential credential);
     String generateRefreshToken(Credential credential);
-
-    Claims parseAndValidate(String token);
-
-    void requireTokenType(Claims claims, String expectedType);
-
     String generateServiceToken();
+
+    JWTClaimsSet parseAndValidate(String token);
+
+    void requireTokenType(JWTClaimsSet claims, String expectedType);
 }
