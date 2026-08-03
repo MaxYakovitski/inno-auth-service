@@ -17,7 +17,7 @@ public class JwtKeyProvider {
         return jwk;
     }
 
-    public RSAKey verificationKey() {
+    public RSAKey publicKey() {
         return jwk.toPublicJWK();
     }
 

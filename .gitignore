@@ -64,5 +64,5 @@ HELP.md
 # Environment variables (local secrets)
 .env
 
-# private key
-src/main/resources/keys/private.pem
+# keys
+src/main/resources/keys/

@@ -27,7 +27,7 @@ public class AuthExceptionHandler {
 
     @ExceptionHandler(UsernameAlreadyInUseException.class)
     public ProblemDetail handleEmailInUse(UsernameAlreadyInUseException e) {
-        log.warn("Username already in use: {}", e.getMessage());
+        log.info("Username already in use: {}", e.getMessage());
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
         problem.setProperty("code", "username_already_in_use");
         return problem;

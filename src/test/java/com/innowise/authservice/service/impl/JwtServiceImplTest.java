@@ -82,7 +82,7 @@ class JwtServiceImplTest {
     @Test
     void token_is_verifiable_with_public_key() throws Exception {
         SignedJWT jwt = SignedJWT.parse(jwtService.generateAccessToken(credential));
-        assertThat(jwt.verify(new RSASSAVerifier(keyProvider.verificationKey()))).isTrue();
+        assertThat(jwt.verify(new RSASSAVerifier(keyProvider.publicKey()))).isTrue();
     }
 
     @Test

@@ -51,7 +51,7 @@ public class JwtServiceImpl implements JwtService {
         try {
             SignedJWT jwt = SignedJWT.parse(token);
 
-            if (!jwt.verify(new RSASSAVerifier(keyProvider.verificationKey()))) {
+            if (!jwt.verify(new RSASSAVerifier(keyProvider.publicKey()))) {
                 throw new BadCredentialsException("Token signature does not match");
             }
 
