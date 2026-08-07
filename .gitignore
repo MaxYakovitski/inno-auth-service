@@ -63,3 +63,6 @@ HELP.md
 
 # Environment variables (local secrets)
 .env
+
+# keys
+src/main/resources/keys/
