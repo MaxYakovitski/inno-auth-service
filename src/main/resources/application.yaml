@@ -7,24 +7,25 @@ spring:
     import: optional:file:.env[.properties]
 
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: jdbc:postgresql://localhost:5434/${POSTGRES_DB}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
 
   jpa:
     hibernate:
       ddl-auto: validate
 
 jwt:
-  private-key: ${JWT_PRIVATE_KEY_LOCATION:classpath:keys/private.pem}
-  public-key: ${JWT_PUBLIC_KEY_LOCATION:classpath:keys/public.pem}
+  private-key: ${JWT_PRIVATE_KEY_LOCATION:file:./keys/private.pem}
+  public-key: ${JWT_PUBLIC_KEY_LOCATION:file:./keys/public.pem}
   key-id: ${JWT_KEY_ID:auth-service-key}
   access-token-expiration: 15m
   refresh-token-expiration: 7d
 
 user-service:
-  base-url: ${USER_SERVICE_URL}
+  base-url: ${USER_SERVICE_URL:http://localhost:8081}
   timeout-ms: 5000
+  users-path: /api/v1/users
 
 server:
-  port: ${SERVER_PORT:8081}
+  port: ${SERVER_PORT:8082}

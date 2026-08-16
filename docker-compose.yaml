@@ -1,18 +1,22 @@
 services:
   auth-service:
     build: .
+    image: inno-auth-service
     container_name: auth-service-app
     ports:
-      - "8081:8081"
+      - "${APP_PORT}:8080"
+    volumes:
+      - ./keys:/run/keys:ro
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8080
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://auth-postgres:5432/${POSTGRES_DB}
       JWT_PRIVATE_KEY_LOCATION: file:/run/keys/private.pem
       JWT_PUBLIC_KEY_LOCATION: file:/run/keys/public.pem
       JWT_KEY_ID: ${JWT_KEY_ID:-auth-service-key}
-      USER_SERVICE_URL: ${USER_SERVICE_URL}
+      USER_SERVICE_URL: http://user-service:8080
     depends_on:
       auth-postgres:
         condition: service_healthy
@@ -28,7 +32,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5433:5432"
+      - "${POSTGRES_HOST_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
