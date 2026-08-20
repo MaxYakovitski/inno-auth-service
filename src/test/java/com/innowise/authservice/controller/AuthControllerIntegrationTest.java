@@ -87,7 +87,7 @@ class AuthControllerIntegrationTest {
     void register_returns201() {
         when(userServiceClient.createUser(any())).thenReturn(userResponseDto);
         var response = restClient.post()
-                .uri("/api/auth/register")
+                .uri("/api/v1/auth/register")
                 .body(credentialCreateDto)
                 .retrieve()
                 .toEntity(CredentialResponseDto.class);
@@ -98,9 +98,9 @@ class AuthControllerIntegrationTest {
     @Test
     void register_duplicateUserName_returns409() {
         when(userServiceClient.createUser(any())).thenReturn(userResponseDto);
-        restClient.post().uri("/api/auth/register").body(credentialCreateDto).retrieve().toBodilessEntity();
+        restClient.post().uri("/api/v1/auth/register").body(credentialCreateDto).retrieve().toBodilessEntity();
 
-        var responseSpec = restClient.post().uri("/api/auth/register").body(credentialCreateDto).retrieve();
+        var responseSpec = restClient.post().uri("/api/v1/auth/register").body(credentialCreateDto).retrieve();
 
         assertThatThrownBy(responseSpec::toBodilessEntity)
                 .isInstanceOf(HttpStatusCodeException.class)
@@ -111,10 +111,10 @@ class AuthControllerIntegrationTest {
     @Test
     void login_with_wrongPassword_returns401() {
         when(userServiceClient.createUser(any())).thenReturn(userResponseDto);
-        restClient.post().uri("/api/auth/register").body(credentialCreateDto).retrieve().toBodilessEntity();
+        restClient.post().uri("/api/v1/auth/register").body(credentialCreateDto).retrieve().toBodilessEntity();
 
         var bodilessEntity = restClient.post()
-                .uri("/api/auth/login")
+                .uri("/api/v1/auth/login")
                 .body(new CredentialLoginDto("m@test.com", "wrongPassword"))
                 .retrieve();
 

@@ -65,4 +65,4 @@ HELP.md
 .env
 
 # keys
-src/main/resources/keys/
+/keys

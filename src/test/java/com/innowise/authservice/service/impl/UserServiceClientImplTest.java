@@ -22,6 +22,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 class UserServiceClientImplTest {
 
     private static  final String BASE_URL = "http://user-service";
+    private static final String USER_PATH = "/api/v1/users";
 
     private MockRestServiceServer mockServer;
     private UserServiceClientImpl client;
@@ -38,12 +39,12 @@ class UserServiceClientImplTest {
     void setUp() {
         var builder = RestClient.builder().baseUrl(BASE_URL);
         mockServer = MockRestServiceServer.bindTo(builder).build();
-        client = new UserServiceClientImpl(builder.build());
+        client = new UserServiceClientImpl(builder.build(), USER_PATH);
     }
 
     @Test
     void createUser_returns_Response() {
-        mockServer.expect(requestTo(BASE_URL + "/api/users"))
+        mockServer.expect(requestTo(BASE_URL + USER_PATH))
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withStatus(HttpStatus.CREATED)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -58,7 +59,7 @@ class UserServiceClientImplTest {
 
     @Test
     void createUser_returns_failure_with_IntegrationException() {
-        mockServer.expect(requestTo(BASE_URL + "/api/users"))
+        mockServer.expect(requestTo(BASE_URL + USER_PATH))
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
 
@@ -68,7 +69,7 @@ class UserServiceClientImplTest {
 
     @Test
     void deleteUser_sendsDeleteRequest() {
-        mockServer.expect(requestTo(BASE_URL + "/api/users/" + userId))
+        mockServer.expect(requestTo(BASE_URL + USER_PATH + "/" + userId))
                 .andExpect(method(HttpMethod.DELETE))
                 .andRespond(withStatus(HttpStatus.NO_CONTENT));
 
@@ -79,7 +80,7 @@ class UserServiceClientImplTest {
 
     @Test
     void deleteUser_remoteFailure_throwsIntegrationException() {
-        mockServer.expect(requestTo(BASE_URL + "/api/users/" + userId))
+        mockServer.expect(requestTo(BASE_URL + USER_PATH + "/" + userId))
                 .andExpect(method(HttpMethod.DELETE))
                 .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
 

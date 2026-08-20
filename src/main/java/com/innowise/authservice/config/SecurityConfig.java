@@ -13,11 +13,11 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 public class SecurityConfig {
 
-    private static final String[] AUTH_WHITELIST = {
-            "/api/auth/login",
-            "/api/auth/logout",
-            "/api/auth/register",
-            "/api/auth/refresh",
+    private static final String[] PUBLIC_ENDPOINTS = {
+            "/api/v1/auth/login",
+            "/api/v1/auth/logout",
+            "/api/v1/auth/register",
+            "/api/v1/auth/refresh",
             "/.well-known/jwks.json",
             "/actuator/health",
             "/actuator/health/**",
@@ -39,7 +39,7 @@ public class SecurityConfig {
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(AUTH_WHITELIST).permitAll()
+                        .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                 .anyRequest().authenticated());
                 return http.build();
     }
